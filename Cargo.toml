@@ -1,0 +1,9 @@
+[package]
+name = "ray"
+version = "0.1.0"
+authors = ["nicolas <nicolas@antheus.com.br>"]
+edition = "2018"
+
+[dependencies]
+rand = "0.6.5"
+lodepng = "2.4.2"
