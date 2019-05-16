@@ -10,9 +10,9 @@ use hitable::{HitRecord, Hitable, Sphere};
 fn color(r: Ray, world: &Vec<Box<Hitable>>) -> Vec3 {
     match(world.hit(r, 0.00001, 10000.0)) {
         Some(rec) => { // cor quando acerta um objeto
-            let n: Vec3 = (r.point_at_parameter(t) - Vec3(0.0, 0.0, -1.0)).make_unit_vector();
-            return 0.5 * (n + Vec3(1.0, 1.0, 1.0))
-            //return 0.5 * Vec3(rec.normal.x()+1.0, rec.normal.y()+1.0, rec.normal.z()+1.0)
+            //let n: Vec3 = (r.point_at_parameter(t) - Vec3(0.0, 0.0, -1.0)).make_unit_vector();
+            //return 0.5 * (n + Vec3(1.0, 1.0, 1.0))
+            return 0.5 * Vec3(rec.normal.x()+1.0, rec.normal.y()+1.0, rec.normal.z()+1.0)
         }
         None      => { // background color (ta correto)
             let unit_direction = r.direction().make_unit_vector();
