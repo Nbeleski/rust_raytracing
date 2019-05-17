@@ -3,16 +3,24 @@ extern crate lodepng; // output PNG image files
 
 mod vec;
 mod hitable;
+mod camera;
+mod material;
 
+use rand::Rng;
 use vec::{Vec3, Ray};
-use hitable::{HitRecord, Hitable, Sphere};
+use hitable::{HitRecord, Hitable, Sphere, random_in_unit_sphere};
+use camera::{Camera};
+use material::{Lambertian, Metal};
 
-fn color(r: Ray, world: &Vec<Box<Hitable>>) -> Vec3 {
+fn color(r: Ray, world: &Vec<Box<Hitable>>, mut depth: i32) -> Vec3 {
     match(world.hit(r, 0.00001, 10000.0)) {
         Some(rec) => { // cor quando acerta um objeto
-            //let n: Vec3 = (r.point_at_parameter(t) - Vec3(0.0, 0.0, -1.0)).make_unit_vector();
-            //return 0.5 * (n + Vec3(1.0, 1.0, 1.0))
-            return 0.5 * Vec3(rec.normal.x()+1.0, rec.normal.y()+1.0, rec.normal.z()+1.0)
+            if depth < 50 {
+                let target: Vec3 = rec.p + rec.normal + random_in_unit_sphere();
+                return 0.5 * color(Ray::new(rec.p, target - rec.p), world, depth+1)
+            } else {
+                return Vec3(0.0, 0.0, 0.0)
+            }
         }
         None      => { // background color (ta correto)
             let unit_direction = r.direction().make_unit_vector();
@@ -28,25 +36,35 @@ fn main() {
     let vertical: Vec3   = Vec3(0.0, 2.0, 0.0);
     let origin: Vec3     = Vec3(0.0, 0.0, 0.0);
 
-    let nx: i32 = 200;
-    let ny: i32 = 100;
+    let nx: i32 = 800;
+    let ny: i32 = 400;
+    let ns: i32 = 200;
 
     let mut spheres: Vec<Sphere> = vec![
-        Sphere{center: Vec3(0.0, 0.0, -1.0), radius: 0.5},
-        Sphere{center: Vec3(0.0, -100.5, -1.0), radius: 100.0},
+        Sphere{center: Vec3(0.0, 0.0, -1.0), radius: 0.5, material: Box::new(Lambertian{albedo: Vec3(0.8, 0.3, 0.3)})},
+        Sphere{center: Vec3(0.0, -100.5, -1.0), radius: 100.0, material: Box::new(Lambertian{albedo: Vec3(0.8, 0.8, 0.0)})},
+        Sphere{center: Vec3(1.0, 0.0, -1.0), radius: 0.5, material: Box::new(Metal{albedo: Vec3(0.8, 0.6, 0.2), fuzz: 0.0})},
+        Sphere{center: Vec3(-1.0, 0.0, -1.0), radius: 0.5, material: Box::new(Metal{albedo: Vec3(0.8, 0.8, 0.8), fuzz: 0.0})},
     ];
 
     // WTF IS THIS? HARDEST PART TO EXPLAIN.
     let world: Vec<Box<Hitable>> = spheres.into_iter().map(|s| Box::new(s) as Box<Hitable>).collect();
 
+    let cam: Camera = Default::default();
+    let mut rng = rand::thread_rng();
     println!("P3\n{} {}\n255", nx, ny);
     for j in (0..ny).rev() {
         for i in 0..nx {
-            let u: f32 = i as f32 / nx as f32;
-            let v: f32 = j as f32 / ny as f32;
-            let r: Ray = Ray(origin, lower_left_corner + u*horizontal + v*vertical);
+            let mut col = Vec3(0.0, 0.0, 0.0);
+            for s in 0..ns {
+                let u: f32 = ((i as f32) + rng.gen::<f32>()) / nx as f32;
+                let v: f32 = ((j as f32) + rng.gen::<f32>()) / ny as f32;
+                let r: Ray = cam.get_ray(u, v);
+                col = col + color(r, &world, 0);
+            }
             
-            let col: Vec3 = color(r, &world);
+            col = col / ns as f32;
+            col = Vec3(col.x().sqrt(), col.y().sqrt(), col.z().sqrt());
             let ir: i32 = (255.99*col.r()) as i32;
             let ig: i32 = (255.99*col.g()) as i32;
             let ib: i32 = (255.99*col.b()) as i32;
@@ -87,24 +105,3 @@ fn main() {
     //         return (-b - discriminant.sqrt() ) / (2.0 * a)
     //     }
     // }
-
-    // let lower_left_corner: Vec3 = Vec3(-2.0, -1.0, -1.0);
-    // let horizontal: Vec3 = Vec3(4.0, 0.0, 0.0);
-    // let vertical: Vec3   = Vec3(0.0, 2.0, 0.0);
-    // let origin: Vec3     = Vec3(0.0, 0.0, 0.0);
-    // 
-    // let nx: i32 = 200;
-    // let ny: i32 = 100;
-    // println!("P3\n{} {}\n255", nx, ny);
-    // for j in (0..ny).rev() {
-    //     for i in 0..nx {
-    //         let u: f32 = i as f32 / nx as f32;
-    //         let v: f32 = j as f32 / ny as f32;
-    //         let r: Ray = Ray(origin, lower_left_corner + u*horizontal + v*vertical);
-    //         let col: Vec3 = color(r);
-    //         let ir: i32 = (255.99*col.r()) as i32;
-    //         let ig: i32 = (255.99*col.g()) as i32;
-    //         let ib: i32 = (255.99*col.b()) as i32;
-    //         println!("{} {} {}", ir, ig, ib);
-    //     }
-    // }   

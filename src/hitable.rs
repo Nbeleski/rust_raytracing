@@ -1,10 +1,16 @@
+extern crate rand;
 use crate::vec::{Vec3, Ray};
+use crate::material::{Scatter, Material};
+
+
+use rand::Rng;
 
 #[derive(Clone, Copy)]
-pub struct HitRecord {
+pub struct HitRecord<'obj> {
     pub t: f32,
     pub p: Vec3,
-    pub normal: Vec3
+    pub normal: Vec3,
+    pub material: &'obj Material,
 }
 
 // impl Default for HitRecord {
@@ -13,13 +19,23 @@ pub struct HitRecord {
 //     }
 // }
 
-pub trait Hitable {
-    fn hit(&self, r: Ray, t_min: f32, t_max: f32) -> Option<HitRecord>;
-}
-
 pub struct Sphere {
     pub center: Vec3,
-    pub radius: f32
+    pub radius: f32,
+    pub material: Box<Material>
+}
+
+pub fn random_in_unit_sphere() -> Vec3 {
+    let mut rng = rand::thread_rng();
+    let mut p = 2.0*Vec3(rng.gen::<f32>(), rng.gen::<f32>(), rng.gen::<f32>()) - Vec3(1.0, 1.0, 1.0);
+    while p.squared_length() >= 1.0 {
+        p = 2.0*Vec3(rng.gen::<f32>(), rng.gen::<f32>(), rng.gen::<f32>()) - Vec3(1.0, 1.0, 1.0);
+    }
+    return p
+}
+
+pub trait Hitable {
+    fn hit(&self, r: Ray, t_min: f32, t_max: f32) -> Option<HitRecord>;
 }
 
 impl Hitable for Sphere {
@@ -30,23 +46,25 @@ impl Hitable for Sphere {
         let c: f32 = oc.dot(oc) - self.radius*self.radius;
         let discriminant: f32 = b*b - 4.0*a*c;
         if discriminant > 0.0 {
-            let mut temp: f32 = (-b - (b*b - a*c).sqrt()) / a;
+            let mut temp: f32 = (-b - discriminant.sqrt()) / (2.0 * a);
             if temp < t_max && temp > t_min {
                 let pemp = r.point_at_parameter(temp);
                 return Some(HitRecord {
                     t: temp,
                     p: pemp,
-                    normal: (pemp - self.center) / self.radius
+                    normal: (pemp - self.center) / self.radius,
+                    material: &*self.material
                 })
             }
 
-            temp = (-b + (b*b - a*c).sqrt()) / a;
+            temp = (-b + discriminant.sqrt()) / (2.0 * a);
             if temp < t_max && temp > t_min {
                 let pemp = r.point_at_parameter(temp);
                 return Some(HitRecord {
                     t: temp,
                     p: pemp,
-                    normal: (pemp - self.center) / self.radius
+                    normal: (pemp - self.center) / self.radius,
+                    material: &*self.material
                 })
             }
         }
